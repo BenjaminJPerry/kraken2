@@ -4175,18 +4175,25 @@ def merge_classification_output2(
                 right.strip().split('\t', 5)
             if status1 == "C" and status2 == "C":
                 status = "C"
-                counts_array1, counts_len1 =\
-                    parse_taxid_counts(counts1, counts_array1)
-                counts_array2, counts_len2 =\
-                    parse_taxid_counts(counts2, counts_array2)
-                counts, counts_map, total_minimizers =\
-                    merge_counts(
-                        taxonomy, lca_cache, counts_array1,
-                        counts_len1, counts_array2, counts_len2
+                if args.merge_policy == "first-classified":
+                    taxid = taxid1
+                    counts = counts1
+                elif args.merge_policy == "last-classified":
+                    taxid = taxid2
+                    counts = counts2
+                else:
+                    counts_array1, counts_len1 =\
+                        parse_taxid_counts(counts1, counts_array1)
+                    counts_array2, counts_len2 =\
+                        parse_taxid_counts(counts2, counts_array2)
+                    counts, counts_map, total_minimizers =\
+                        merge_counts(
+                            taxonomy, lca_cache, counts_array1,
+                            counts_len1, counts_array2, counts_len2
+                        )
+                    taxid = resolve_taxa_tree(
+                        counts_map, taxonomy, total_minimizers, args
                     )
-                taxid = resolve_taxa_tree(
-                    counts_map, taxonomy, total_minimizers, args
-                )
             elif status1 == "C" and status2 == "U":
                 status = "C"
                 taxid = taxid1
@@ -5065,6 +5072,18 @@ def make_classify_parser(subparsers):
         separated list with no spaces.",
     )
     parser.add_argument(
+        "--merge-policy",
+        choices=["first-classified", "last-classified", "resolve-lca"],
+        default="resolve-lca",
+        help="Policy for resolving classified reads across databases.\
+        first-classified - The assigned tax ID will be chosen from the database\
+        where the read was first classified. last-classified - The assigned tax\
+        ID will be chosen from the database where the read was last classified.\
+        resolve-lca (default) - The assigned tax ID will be the result of\
+        finding the Lowest Common Ancestor, LCA, of all the tax IDs\
+        assigned to this read."
+    )
+    parser.add_argument(
         "--threads",
         type=int,
         metavar="INT",
@@ -5312,6 +5331,18 @@ def make_merge_parser(subparsers):
         help="Pathname to Kraken2 database(s).\
         Multiple databases are specified as a comma-\
         separated list with no spaces.",
+    )
+    parser.add_argument(
+        "--merge-policy",
+        choices=["first-classified", "last-classified", "resolve-lca"],
+        default="resolve-lca",
+        help="Policy for resolving classified reads across databases.\
+        first-classified - the assigned tax ID will be chosen from the database\
+        where the read was first classified. last-classified - the assigned tax\
+        ID will be chosen from the database where the read was last classified.\
+        resolve-lca (default) - the assigned tax ID will be the result of\
+        finding the Lowest Common Ancestor, LCA, of all the tax IDs\
+        assigned to this read."
     )
     parser.add_argument(
         "--log",
